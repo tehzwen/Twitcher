@@ -7,7 +7,6 @@ module Twitcher
   class Error < StandardError; end
   
   class Client
-
     attr_accessor :token, :client_id, :token_expires_in
     attr :client_secret, :time_authed
 
@@ -43,7 +42,7 @@ module Twitcher
       HTTParty.get(url)
     end
 
-    def get_channel(channel_name:)
+    def search_channel(channel_name:)
       query = {
         query: channel_name
       }
@@ -52,8 +51,21 @@ module Twitcher
         Authorization: "Bearer #{@token}"
       }
 
-      HTTParty.get("https://api.twitch.tv/helix/search/channels", query: query, headers: headers)['data']
+      results = HTTParty.get("https://api.twitch.tv/helix/search/channels", query: query, headers: headers)['data']
+      results.select do |r|
+        r['display_name'].downcase.include?(channel_name.downcase)
+      end
+    end
+
+    def get_channel(channel_name:)
+      data = search_channel(channel_name: channel_name)
+
+      data.each do |channel|
+        if (channel['display_name'].downcase == channel_name.downcase)
+          return channel.transform_keys(&:to_sym)
+        end
+      end
+      return nil
     end
   end
-
 end
